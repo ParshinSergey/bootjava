@@ -33,3 +33,10 @@ spring:
     basePath: /api
     returnBodyOnCreate: true
 
+# Jackson Serialization Issue Resolver
+#  jackson:
+#    visibility.field: any
+#    visibility.getter: none
+#    visibility.setter: none
+#    visibility.is-getter: none
+
