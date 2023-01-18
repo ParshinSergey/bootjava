@@ -1,0 +1,176 @@
+Index: src/main/java/ru/javaops/bootjava/model/Role.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/model/Role.java	(revision d690d62240e90b1b1d458d349e4c1acda652ccdc)
++++ src/main/java/ru/javaops/bootjava/model/Role.java	(date 1603213505104)
+@@ -1,6 +1,13 @@
+ package ru.javaops.bootjava.model;
+ 
+-public enum Role {
++import org.springframework.security.core.GrantedAuthority;
++
++public enum Role implements GrantedAuthority {
+     ROLE_USER,
+-    ROLE_ADMIN
++    ROLE_ADMIN;
++
++    @Override
++    public String getAuthority() {
++        return name();
++    }
+ }
+\ No newline at end of file
+Index: src/main/java/ru/javaops/bootjava/config/WebSecurityConfig.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/config/WebSecurityConfig.java	(revision d690d62240e90b1b1d458d349e4c1acda652ccdc)
++++ src/main/java/ru/javaops/bootjava/config/WebSecurityConfig.java	(date 1603213714406)
+@@ -1,21 +1,43 @@
+ package ru.javaops.bootjava.config;
+ 
++import lombok.AllArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
+ import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+ import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+ import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
++import org.springframework.security.core.userdetails.UserDetailsService;
++import org.springframework.security.core.userdetails.UsernameNotFoundException;
+ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
++import ru.javaops.bootjava.AuthUser;
++import ru.javaops.bootjava.model.User;
++import ru.javaops.bootjava.repository.UserRepository;
++
++import java.util.Optional;
+ 
+ @Configuration
+ @EnableWebSecurity
++@Slf4j
++@AllArgsConstructor
+ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+ 
++    private final UserRepository userRepository;
++
++    @Bean
++    public UserDetailsService userDetailsService() {
++        return email -> {
++            log.debug("Authenticating '{}'", email);
++            Optional<User> optionalUser = userRepository.findByEmailIgnoreCase(email);
++            return new AuthUser(optionalUser.orElseThrow(
++                    () -> new UsernameNotFoundException("User '" + email + "' was not found")));
++        };
++    }
++
+     @Autowired
+     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+-        auth.inMemoryAuthentication()
+-                .passwordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder())
+-                .withUser("user@gmail.com").password("{noop}password").roles("USER").and()
+-                .withUser("admin@javaops.ru").password("{noop}admin").roles("USER", "ADMIN");
++        auth.userDetailsService(userDetailsService())
++                .passwordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder());
+     }
+ }
+\ No newline at end of file
+Index: src/main/java/ru/javaops/bootjava/web/AccountController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/web/AccountController.java	(revision d690d62240e90b1b1d458d349e4c1acda652ccdc)
++++ src/main/java/ru/javaops/bootjava/web/AccountController.java	(date 1603213760109)
+@@ -5,13 +5,15 @@
+ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.RestController;
++import ru.javaops.bootjava.AuthUser;
++import ru.javaops.bootjava.model.User;
+ 
+ @RestController
+ @RequestMapping(value = "/api/account")
+ public class AccountController {
+ 
+     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+-    public Object get(@AuthenticationPrincipal Object authUser) {
+-        return authUser;
++    public User get(@AuthenticationPrincipal AuthUser authUser) {
++        return authUser.getUser();
+     }
+ }
+Index: src/main/java/ru/javaops/bootjava/model/User.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/model/User.java	(revision d690d62240e90b1b1d458d349e4c1acda652ccdc)
++++ src/main/java/ru/javaops/bootjava/model/User.java	(date 1603213505108)
+@@ -6,6 +6,7 @@
+ import javax.validation.constraints.Email;
+ import javax.validation.constraints.NotEmpty;
+ import javax.validation.constraints.Size;
++import java.io.Serializable;
+ import java.util.Set;
+ 
+ @Entity
+@@ -15,7 +16,7 @@
+ @NoArgsConstructor(access = AccessLevel.PROTECTED)
+ @AllArgsConstructor
+ @ToString(callSuper = true, exclude = {"password"})
+-public class User extends BaseEntity {
++public class User extends BaseEntity implements Serializable {
+ 
+     @Column(name = "email", nullable = false, unique = true)
+     @Email
+Index: src/main/resources/data.sql
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/data.sql	(revision d690d62240e90b1b1d458d349e4c1acda652ccdc)
++++ src/main/resources/data.sql	(date 1603213481724)
+@@ -1,6 +1,6 @@
+ INSERT INTO USERS (EMAIL, FIRST_NAME, LAST_NAME, PASSWORD)
+-VALUES ('user@gmail.com', 'User_First', 'User_Last', 'password'),
+-       ('admin@javaops.ru', 'Admin_First', 'Admin_Last', 'admin');
++VALUES ('user@gmail.com', 'User_First', 'User_Last', '{noop}password'),
++       ('admin@javaops.ru', 'Admin_First', 'Admin_Last', '{noop}admin');
+ 
+ INSERT INTO USER_ROLE (ROLE, USER_ID)
+ VALUES ('ROLE_USER', 1),
+Index: src/main/java/ru/javaops/bootjava/AuthUser.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/AuthUser.java	(date 1603213714412)
++++ src/main/java/ru/javaops/bootjava/AuthUser.java	(date 1603213714412)
+@@ -0,0 +1,22 @@
++package ru.javaops.bootjava;
++
++import lombok.Getter;
++import lombok.ToString;
++import org.springframework.lang.NonNull;
++import ru.javaops.bootjava.model.User;
++
++@Getter
++@ToString(of = "user")
++public class AuthUser extends org.springframework.security.core.userdetails.User {
++
++    private final User user;
++
++    public AuthUser(@NonNull User user) {
++        super(user.getEmail(), user.getPassword(), user.getRoles());
++        this.user = user;
++    }
++
++    public int id() {
++        return user.id();
++    }
++}
+\ No newline at end of file

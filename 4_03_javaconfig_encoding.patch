@@ -1,0 +1,88 @@
+Index: src/main/resources/application.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/application.yaml	(revision 96827a1de0780d175dc36f4f9aa38049b706addc)
++++ src/main/resources/application.yaml	(date 1606230926106)
+@@ -33,18 +33,18 @@
+     basePath: /api
+     returnBodyOnCreate: true
+ 
+-    #  https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#security-properties
+-  security:
+-    user:
+-      name: user
+-      password: password
+-      roles: USER
++#  https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#security-properties
++#  security:
++#    user:
++#      name: user
++#      password: password
++#      roles: USER
+ 
+ logging:
+   level:
+     root: WARN
+     ru.javaops.bootjava: DEBUG
+-    org.springframework.security.web.FilterChainProxy: DEBUG
++#    org.springframework.security.web.FilterChainProxy: DEBUG
+ 
+ # Jackson Serialization Issue Resolver
+ #  jackson:
+Index: src/main/java/ru/javaops/bootjava/web/AccountController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/web/AccountController.java	(date 1606230926100)
++++ src/main/java/ru/javaops/bootjava/web/AccountController.java	(date 1606230926100)
+@@ -0,0 +1,17 @@
++package ru.javaops.bootjava.web;
++
++import org.springframework.http.MediaType;
++import org.springframework.security.core.annotation.AuthenticationPrincipal;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++@RequestMapping(value = "/api/account")
++public class AccountController {
++
++    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
++    public Object get(@AuthenticationPrincipal Object authUser) {
++        return authUser;
++    }
++}
+Index: src/main/java/ru/javaops/bootjava/config/WebSecurityConfig.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/config/WebSecurityConfig.java	(date 1606230926097)
++++ src/main/java/ru/javaops/bootjava/config/WebSecurityConfig.java	(date 1606230926097)
+@@ -0,0 +1,21 @@
++package ru.javaops.bootjava.config;
++
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
++import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
++import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
++import org.springframework.security.crypto.factory.PasswordEncoderFactories;
++
++@Configuration
++@EnableWebSecurity
++public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
++
++    @Autowired
++    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
++        auth.inMemoryAuthentication()
++                .passwordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder())
++                .withUser("user@gmail.com").password("{noop}password").roles("USER").and()
++                .withUser("admin@javaops.ru").password("{noop}admin").roles("USER", "ADMIN");
++    }
++}
+\ No newline at end of file
