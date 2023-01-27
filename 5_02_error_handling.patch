@@ -1,0 +1,113 @@
+Index: src/main/java/ru/javaops/bootjava/error/IllegalRequestDataException.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/error/IllegalRequestDataException.java	(date 1605616097353)
++++ src/main/java/ru/javaops/bootjava/error/IllegalRequestDataException.java	(date 1605616097353)
+@@ -0,0 +1,12 @@
++package ru.javaops.bootjava.error;
++
++import org.springframework.boot.web.error.ErrorAttributeOptions;
++import org.springframework.http.HttpStatus;
++
++import static org.springframework.boot.web.error.ErrorAttributeOptions.Include.MESSAGE;
++
++public class IllegalRequestDataException extends AppException {
++    public IllegalRequestDataException(String msg) {
++        super(HttpStatus.UNPROCESSABLE_ENTITY, msg, ErrorAttributeOptions.of(MESSAGE));
++    }
++}
+\ No newline at end of file
+Index: src/main/java/ru/javaops/bootjava/error/AppException.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/error/AppException.java	(date 1605562337497)
++++ src/main/java/ru/javaops/bootjava/error/AppException.java	(date 1605562337497)
+@@ -0,0 +1,16 @@
++package ru.javaops.bootjava.error;
++
++import lombok.Getter;
++import org.springframework.boot.web.error.ErrorAttributeOptions;
++import org.springframework.http.HttpStatus;
++import org.springframework.web.server.ResponseStatusException;
++
++@Getter
++public class AppException extends ResponseStatusException {
++    private final ErrorAttributeOptions options;
++
++    public AppException(HttpStatus status, String message, ErrorAttributeOptions options) {
++        super(status, message);
++        this.options = options;
++    }
++}
+Index: src/main/java/ru/javaops/bootjava/util/ValidationUtil.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/util/ValidationUtil.java	(revision c48a04fbeed6f3bed61700fe745d0202255d527f)
++++ src/main/java/ru/javaops/bootjava/util/ValidationUtil.java	(date 1605560817650)
+@@ -1,12 +1,13 @@
+ package ru.javaops.bootjava.util;
+ 
++import ru.javaops.bootjava.error.IllegalRequestDataException;
+ import ru.javaops.bootjava.model.BaseEntity;
+ 
+ public class ValidationUtil {
+ 
+     public static void checkNew(BaseEntity entity) {
+         if (!entity.isNew()) {
+-            throw new IllegalArgumentException(entity + " must be new (id=null)");
++            throw new IllegalRequestDataException(entity.getClass().getSimpleName() + " must be new (id=null)");
+         }
+     }
+ 
+@@ -15,7 +16,7 @@
+         if (entity.isNew()) {
+             entity.setId(id);
+         } else if (entity.id() != id) {
+-            throw new IllegalArgumentException(entity + " must has id=" + id);
++            throw new IllegalRequestDataException(entity.getClass().getSimpleName() + " must has id=" + id);
+         }
+     }
+ }
+\ No newline at end of file
+Index: src/main/java/ru/javaops/bootjava/web/error/GlobalExceptionHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javaops/bootjava/web/error/GlobalExceptionHandler.java	(date 1605616253812)
++++ src/main/java/ru/javaops/bootjava/web/error/GlobalExceptionHandler.java	(date 1605616253812)
+@@ -0,0 +1,28 @@
++package ru.javaops.bootjava.web.error;
++
++import lombok.AllArgsConstructor;
++import org.springframework.boot.web.servlet.error.ErrorAttributes;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.annotation.ExceptionHandler;
++import org.springframework.web.bind.annotation.RestControllerAdvice;
++import org.springframework.web.context.request.WebRequest;
++import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
++import ru.javaops.bootjava.error.AppException;
++
++import java.util.Map;
++
++@RestControllerAdvice
++@AllArgsConstructor
++public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
++    private final ErrorAttributes errorAttributes;
++
++    @ExceptionHandler(AppException.class)
++    public ResponseEntity<Map<String, Object>> appException(AppException ex, WebRequest request) {
++        Map<String, Object> body = errorAttributes.getErrorAttributes(request, ex.getOptions());
++        HttpStatus status = ex.getStatus();
++        body.put("status", status.value());
++        body.put("error", status.getReasonPhrase());
++        return ResponseEntity.status(status).body(body);
++    }
++}
