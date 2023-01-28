@@ -5,6 +5,8 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import ru.javaops.bootjava.repository.UserRepository;
 
 @SpringBootApplication
@@ -18,8 +20,6 @@ public class RestaurantVotingApplication implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        System.out.println(userRepository.findByLastNameContainingIgnoreCase("last"));
-        System.out.println();
         System.out.println(userRepository.findByPasswordContaining("ass"));
     }
 }
