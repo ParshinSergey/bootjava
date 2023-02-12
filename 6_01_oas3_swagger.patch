@@ -1,0 +1,144 @@
+Index: src/main/java/ru/javaops/bootjava/config/OpenApiConfig.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/ru/javaops/bootjava/config/OpenApiConfig.java b/src/main/java/ru/javaops/bootjava/config/OpenApiConfig.java
+new file mode 100644
+--- /dev/null	(date 1616935212382)
++++ b/src/main/java/ru/javaops/bootjava/config/OpenApiConfig.java	(date 1616935212382)
+@@ -0,0 +1,39 @@
++package ru.javaops.bootjava.config;
++
++import io.swagger.v3.oas.annotations.OpenAPIDefinition;
++import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
++import io.swagger.v3.oas.annotations.info.Contact;
++import io.swagger.v3.oas.annotations.info.Info;
++import io.swagger.v3.oas.annotations.security.SecurityRequirement;
++import io.swagger.v3.oas.annotations.security.SecurityScheme;
++import org.springdoc.core.GroupedOpenApi;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++//https://sabljakovich.medium.com/adding-basic-auth-authorization-option-to-openapi-swagger-documentation-java-spring-95abbede27e9
++@SecurityScheme(
++        name = "basicAuth",
++        type = SecuritySchemeType.HTTP,
++        scheme = "basic"
++)
++@OpenAPIDefinition(
++        info = @Info(
++                title = "REST API documentation",
++                version = "1.0",
++                description = "Приложение по <a href='https://javaops.ru/view/bootjava'>курсу BootJava</a>",
++                contact = @Contact(url = "https://javaops.ru/#contacts", name = "Grigory Kislin", email = "admin@javaops.ru")
++        ),
++        security = @SecurityRequirement(name = "basicAuth")
++)
++public class OpenApiConfig {
++
++    @Bean
++    public GroupedOpenApi api() {
++        return GroupedOpenApi.builder()
++                .group("REST API")
++                .pathsToMatch("/api/**")
++                .pathsToExclude("/api/profile/**")
++                .build();
++    }
++}
+Index: src/main/java/ru/javaops/bootjava/repository/UserRepository.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/ru/javaops/bootjava/repository/UserRepository.java b/src/main/java/ru/javaops/bootjava/repository/UserRepository.java
+--- a/src/main/java/ru/javaops/bootjava/repository/UserRepository.java	(revision 24f7e7fc8451a22eebdef8431f271b6b7fb52941)
++++ b/src/main/java/ru/javaops/bootjava/repository/UserRepository.java	(date 1616948395030)
+@@ -1,5 +1,6 @@
+ package ru.javaops.bootjava.repository;
+ 
++import io.swagger.v3.oas.annotations.tags.Tag;
+ import org.springframework.data.domain.Page;
+ import org.springframework.data.domain.Pageable;
+ import org.springframework.data.jpa.repository.JpaRepository;
+@@ -11,6 +12,7 @@
+ import java.util.Optional;
+ 
+ @Transactional(readOnly = true)
++@Tag(name = "User Controller")
+ public interface UserRepository extends JpaRepository<User, Integer> {
+ 
+     @RestResource(rel = "by-email", path = "by-email")
+Index: pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pom.xml b/pom.xml
+--- a/pom.xml	(revision 24f7e7fc8451a22eebdef8431f271b6b7fb52941)
++++ b/pom.xml	(date 1616250813365)
+@@ -17,6 +17,7 @@
+ 
+     <properties>
+         <java.version>15</java.version>
++        <springdoc.version>1.5.6</springdoc.version>
+     </properties>
+ 
+     <dependencies>
+@@ -48,6 +49,23 @@
+                     <scope>runtime</scope>
+                 </dependency>
+         -->
++
++        <!--Swagger-->
++        <dependency>
++            <groupId>org.springdoc</groupId>
++            <artifactId>springdoc-openapi-ui</artifactId>
++            <version>${springdoc.version}</version>
++        </dependency>
++        <dependency>
++            <groupId>org.springdoc</groupId>
++            <artifactId>springdoc-openapi-data-rest</artifactId>
++            <version>${springdoc.version}</version>
++        </dependency>
++        <dependency>
++            <groupId>org.springdoc</groupId>
++            <artifactId>springdoc-openapi-security</artifactId>
++            <version>${springdoc.version}</version>
++        </dependency>
+         <dependency>
+             <groupId>com.h2database</groupId>
+             <artifactId>h2</artifactId>
+@@ -58,7 +76,7 @@
+             <optional>true</optional>
+         </dependency>
+ 
+-<!--    https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.4-Release-Notes#junit-5s-vintage-engine-removed-from-spring-boot-starter-test-->
++        <!--    https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.4-Release-Notes#junit-5s-vintage-engine-removed-from-spring-boot-starter-test-->
+         <dependency>
+             <groupId>org.springframework.boot</groupId>
+             <artifactId>spring-boot-starter-test</artifactId>
+Index: src/main/java/ru/javaops/bootjava/web/AccountController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/ru/javaops/bootjava/web/AccountController.java b/src/main/java/ru/javaops/bootjava/web/AccountController.java
+--- a/src/main/java/ru/javaops/bootjava/web/AccountController.java	(revision 24f7e7fc8451a22eebdef8431f271b6b7fb52941)
++++ b/src/main/java/ru/javaops/bootjava/web/AccountController.java	(date 1616948395033)
+@@ -1,5 +1,6 @@
+ package ru.javaops.bootjava.web;
+ 
++import io.swagger.v3.oas.annotations.tags.Tag;
+ import lombok.AllArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.data.rest.webmvc.RepositoryLinksResource;
+@@ -38,6 +39,7 @@
+ @RequestMapping("/api/account")
+ @AllArgsConstructor
+ @Slf4j
++@Tag(name = "Account Controller")
+ public class AccountController implements RepresentationModelProcessor<RepositoryLinksResource> {
+     @SuppressWarnings("unchecked")
+     private static final RepresentationModelAssemblerSupport<User, EntityModel<User>> ASSEMBLER =
